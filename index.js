@@ -81,14 +81,10 @@ const GameController = function (playerOneName = "Player One", playerTwoName = "
         { name: playerTwoName, token: null, score: 0 }
     ];
 
-    
-
-    const getPlayerToken = () => {
-        let playerOneToken = prompt("Which token would you want to choose? (X / O)").toUpperCase();
-        let playerTwoToken = (playerOneToken === 'X') ? 'O' : 'X';
-        players[0].token = playerOneToken;
-        players[1].token = playerTwoToken;
-    }
+    let playerOneToken = prompt("Which token would you want to choose? (X / O)").toUpperCase();
+    let playerTwoToken = (playerOneToken === 'X') ? 'O' : 'X';
+    players[0].token = playerOneToken;
+    players[1].token = playerTwoToken;
 
     let activePlayer = players[0];
 
@@ -105,19 +101,16 @@ const GameController = function (playerOneName = "Player One", playerTwoName = "
         console.log(`${getActivePlayer().name}'s turn.`);
     };
 
-    const playTurn = (playerRow, playerColumn, getActivePlayer().token) => {
+    const playRound = (playerRow, playerColumn) => {
+        // Get row and column as numbers
+         playerRow = parseInt(playerRow, 10);
+        playerColumn = parseInt(playerColumn, 10);
+        
+        // Attempt to place token; if invalid (cell already taken), prompt again
         if (!board.playerToken(playerRow, playerColumn, getActivePlayer().token)) {
             console.log("Cell already taken! Try again.");
             return;
         }
-    };
-
-    const playRound = () => {
-        // Get row and column as numbers
-        playTurn(playerRow, pla);
-        
-        // Attempt to place token; if invalid (cell already taken), prompt again
-        
         
         if (board.gameWon(playerRow, playerColumn)) {
             board.printBoard();
@@ -126,17 +119,16 @@ const GameController = function (playerOneName = "Player One", playerTwoName = "
             return;
         } else if (board.gameDraw()) {
             board.printBoard();
-            console.log("Round was a draw!");
+            console.log("Game was a draw!");
             return;
         } else {
             switchPlayerTurn();
             printNewRound();
-            playRound();
+            
         }
     };
 
     const playGame = () => {
-        getPlayerToken();
         playRound();
         if (getPlayerScore(players[0]) === 3) {
             console.log(`${players[0].name} won the game!`);
@@ -146,14 +138,13 @@ const GameController = function (playerOneName = "Player One", playerTwoName = "
             return;
         } else {
             // Optionally, you might want to start a new round if no one has reached 3 wins
-            getPlayerToken();
             playRound();
         }
     };
 
-    return { playGame, playerTurn };
+    return { playRound };
 };
 
 // Instantiate and start the game
-const gameController = GameController();
-gameController.playGame();
+const game = GameController();
+
