@@ -74,21 +74,24 @@ const Cell = function () {
     return { addToken, getValue };
 };
 
-const GameController = function (playerOneName = "Player One", playerTwoName = "Player Two") {
+const GameController = function (existingPlayers = null) {
     const board = GameBoard();
-    let players = [
-        { name: playerOneName, token: null, score: 0 },
-        { name: playerTwoName, token: null, score: 0 }
+
+    let players = existingPlayers || [ // Keep scores if passed, otherwise create new players
+        { name: "Player One", token: null, score: 0 },
+        { name: "Player Two", token: null, score: 0 }
     ];
 
+   
     let playerOneToken = prompt("Which token would you want to choose? (X / O)").toUpperCase();
     let playerTwoToken = (playerOneToken === 'X') ? 'O' : 'X';
     players[0].token = playerOneToken;
     players[1].token = playerTwoToken;
+    
 
     let activePlayer = players[0];
 
-    const getPlayerScore = (player) => player.score;
+    const getPlayers = () => players; // Add this function to get players
 
     const switchPlayerTurn = () => {
         activePlayer = (activePlayer === players[0]) ? players[1] : players[0];
@@ -96,55 +99,126 @@ const GameController = function (playerOneName = "Player One", playerTwoName = "
 
     const getActivePlayer = () => activePlayer;
 
-    const printNewRound = () => {
-        board.printBoard();
-        console.log(`${getActivePlayer().name}'s turn.`);
-    };
-
     const playRound = (playerRow, playerColumn) => {
-        // Get row and column as numbers
-         playerRow = parseInt(playerRow, 10);
+        playerRow = parseInt(playerRow, 10);
         playerColumn = parseInt(playerColumn, 10);
         
-        // Attempt to place token; if invalid (cell already taken), prompt again
         if (!board.playerToken(playerRow, playerColumn, getActivePlayer().token)) {
             console.log("Cell already taken! Try again.");
-            return;
+            return false;
         }
         
         if (board.gameWon(playerRow, playerColumn)) {
             board.printBoard();
             console.log(`${getActivePlayer().name} wins this round!`);
             getActivePlayer().score++;
-            return;
         } else if (board.gameDraw()) {
             board.printBoard();
             console.log("Game was a draw!");
-            return;
         } else {
             switchPlayerTurn();
-            printNewRound();
-            
         }
+        return true;
     };
 
-    const playGame = () => {
-        playRound();
-        if (getPlayerScore(players[0]) === 3) {
-            console.log(`${players[0].name} won the game!`);
-            return;
-        } else if (getPlayerScore(players[1]) === 3) {
-            console.log(`${players[1].name} won the game!`);
-            return;
-        } else {
-            // Optionally, you might want to start a new round if no one has reached 3 wins
-            playRound();
-        }
+    return { 
+        playRound,
+        getBoard: board.getBoard,
+        getActivePlayer,
+        getPlayers,  // New function to get players (to persist scores)
+        gameWon: board.gameWon,
+        gameDraw: board.gameDraw
     };
-
-    return { playRound };
 };
 
+
 // Instantiate and start the game
-const game = GameController();
+const ScreenController = function () {
+    let game = GameController();
+    
+    const boardEle = document.querySelectorAll(".board-ele");
+    const heading = document.querySelector(".container h1");
+    const player1Score = document.querySelector(".player-1 p");
+    const player2Score = document.querySelector(".player-2 p");
+    const startBtn = document.querySelector(".start");
+    const restartBtn = document.querySelector(".restart");
+
+    startBtn.addEventListener("click", addListnersToBoardEle);
+    restartBtn.addEventListener("click", fullResetGame);
+
+    function addListnersToBoardEle () {
+        boardEle.forEach((ele, index) => {
+            ele.dataset.row = Math.floor(index / 3);
+            ele.dataset.column = index % 3;
+            ele.addEventListener("click", playersMove);
+            heading.textContent = "Player 1 Move";
+            restartBtn.classList.remove("hide");
+            startBtn.classList.add("hide");
+        });
+    }
+
+    function playersMove(e) {
+        const row = parseInt(e.target.dataset.row, 10);
+        const col = parseInt(e.target.dataset.column, 10);
+        
+        const activePlayer = game.getActivePlayer();
+    
+        if (game.playRound(row, col)) {
+            e.target.textContent = activePlayer.token; 
+    
+            if (game.gameWon(row, col)) {
+                heading.textContent = `${activePlayer.name} Won!!!`;
+                if (activePlayer.name == "Player One") {
+                    player1Score.textContent = `${activePlayer.score}`;
+                } else {
+                    player2Score.textContent = `${activePlayer.score}`;
+                }
+                disableBoard();
+                setTimeout(restartGame, 2000); 
+            } 
+            else if (game.gameDraw()) {
+                heading.textContent = "It's a Draw!!!";
+                disableBoard();
+                setTimeout(restartGame, 2000); 
+            } 
+            else {
+                heading.textContent = `${game.getActivePlayer().name} Move`;
+            }
+        }
+    }
+    
+
+    function disableBoard() {
+        boardEle.forEach(ele => ele.removeEventListener("click", playersMove));
+    }
+
+    function fullResetGame() {
+        boardEle.forEach(ele => {
+            ele.textContent = "";
+            ele.addEventListener("click", playersMove);
+        });
+    
+        // Fully reset game and scores
+        game = GameController(); // Create a new game instance without passing players
+        player1Score.textContent = "0"; // Reset UI scores
+        player2Score.textContent = "0";
+        heading.textContent = "Player 1 Move";
+    }
+    
+
+    function restartGame() {
+        boardEle.forEach(ele => {
+            ele.textContent = "";
+            ele.addEventListener("click", playersMove);
+        });
+    
+        // Reset only the game board but keep the scores
+        game = GameController(game.getPlayers()); // Pass players so scores persist
+        heading.textContent = `${game.getActivePlayer().name} Move`;
+    }
+    
+}
+
+ScreenController();
+
 
